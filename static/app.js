@@ -19,7 +19,12 @@ uploadForm?.addEventListener('submit', async (event) => {
 
 chatForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const question = document.getElementById('question').value;
+  const question = document.getElementById('question').value.trim();
+  if (!question) {
+    messages.innerHTML = '<div class="message">Please enter a question first.</div>';
+    return;
+  }
+
   messages.innerHTML = '<div class="message">Thinking...</div>';
 
   const response = await fetch('/api/chat', {
@@ -29,6 +34,11 @@ chatForm?.addEventListener('submit', async (event) => {
   });
 
   const payload = await response.json();
+  if (!response.ok) {
+    messages.innerHTML = `<div class="message">${payload.detail || 'Unable to process your request.'}</div>`;
+    return;
+  }
+
   messages.innerHTML = `
     <div class="message"><strong>Answer</strong><br>${payload.answer}</div>
     <div class="message"><strong>Sources</strong><br>${payload.sources.map((source) => `• ${source.text}`).join('<br>')}</div>

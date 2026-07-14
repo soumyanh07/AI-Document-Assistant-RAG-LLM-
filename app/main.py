@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -26,7 +26,7 @@ class ChatRequest(BaseModel):
 
 
 @app.get("/")
-async def index(request):
+async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
@@ -60,10 +60,26 @@ async def upload_documents(files: List[UploadFile] = File(default=None)) -> dict
 
 
 @app.post("/api/chat")
-async def chat(request: ChatRequest) -> dict[str, object]:
+async def chat(request: Request) -> dict[str, object]:
     if not storage.chunks:
         raise HTTPException(status_code=400, detail="Upload a document before asking a question")
 
-    answer = storage.build_answer(request.question)
-    sources = storage.search(request.question, top_k=3)
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    if not isinstance(payload, dict):
+        payload = {}
+
+    question = payload.get("question")
+    if not isinstance(question, str) or not question.strip():
+        form_data = await request.form()
+        question = form_data.get("question")
+
+    if not isinstance(question, str) or not question.strip():
+        raise HTTPException(status_code=400, detail="Provide a non-empty question in the request body")
+
+    answer = storage.build_answer(question)
+    sources = storage.search(question, top_k=3)
     return {"answer": answer, "sources": sources}
