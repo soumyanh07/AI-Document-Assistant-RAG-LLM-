@@ -1,28 +1,22 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
 
-from app.rag import DocumentStore
+from backend.app.rag.document_store import DocumentStore
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-UPLOAD_DIR = BASE_DIR / "uploads"
+APP_DIR = Path(__file__).resolve().parent
+UPLOAD_DIR = APP_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 app = FastAPI(title="AI Document Assistant", version="1.0.0")
-app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+app.mount("/static", StaticFiles(directory=str(APP_DIR / "static")), name="static")
 
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 storage = DocumentStore()
-
-
-class ChatRequest(BaseModel):
-    question: str
 
 
 @app.get("/")
@@ -36,25 +30,21 @@ async def health() -> dict[str, object]:
 
 
 @app.post("/api/documents/upload")
-async def upload_documents(files: List[UploadFile] = File(default=None)) -> dict[str, object]:
+async def upload_documents(files: list[UploadFile] = File(default=None)) -> dict[str, object]:
     if not files:
         raise HTTPException(status_code=400, detail="No files were uploaded")
 
-    saved_files: List[Path] = []
-    results: List[dict[str, object]] = []
+    results: list[dict[str, object]] = []
     for uploaded in files:
         if not uploaded.filename:
             continue
         destination = UPLOAD_DIR / uploaded.filename
         content = await uploaded.read()
         destination.write_bytes(content)
-        saved_files.append(destination)
-
-    for saved_path in saved_files:
         try:
-            results.append(storage.add_document(saved_path, saved_path.name))
+            results.append(storage.add_document(destination, destination.name))
         except ValueError as exc:
-            results.append({"name": saved_path.name, "error": str(exc)})
+            results.append({"name": destination.name, "error": str(exc)})
 
     return {"documents": results, "total_chunks": len(storage.chunks)}
 
