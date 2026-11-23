@@ -175,11 +175,11 @@ docker-compose up --build
 | Module | Status |
 |---|---|
 | Backend scaffold | ✅ Completed |
-| Document parsing | 🚧 In Progress |
-| Embedding pipeline | ⏳ Planned |
-| RAG chat | ⏳ Planned |
-| Auth | ⏳ Planned |
-| Docker deployment | ⏳ Planned |
+| Document parsing | ✅ Completed|
+| Embedding pipeline | ✅ Completed |
+| RAG chat | ✅ Completed |
+| Auth | ✅ Completed|
+| Docker deployment | ✅ Completed |
 
 ---
 
